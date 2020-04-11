@@ -5,6 +5,7 @@ import bonobo
 
 from .users_graph import get_users_graph, get_users_services
 from .channels_graph import get_channels_graph, get_channels_services
+from .raw_messages_graph import get_raw_messages_graph, get_raw_messages_services
 
 from . import db
 
@@ -31,4 +32,9 @@ def main():
         bonobo.run(
             get_channels_graph(**options),
             services=get_channels_services(base_services, **options)
-        ) 
+        )
+        logging.info("Getting raw messages")
+        bonobo.run(
+            get_raw_messages_graph(**options),
+            services=get_raw_messages_services(base_services, **options)
+        )

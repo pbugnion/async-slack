@@ -16,6 +16,7 @@ class JsonFsDatabase:
         self._fs = bonobo.open_fs(self._root)
         self._users_file_name = "users.json"
         self._channels_file_name = "channels.json"
+        self._raw_messages_file_name = "raw-messages.json"
 
     @contextmanager
     def open_users_file(self, mode="r"):
@@ -25,6 +26,11 @@ class JsonFsDatabase:
     @contextmanager
     def open_channels_file(self, mode="r"):
         with self._fs.open(self._channels_file_name, mode, encoding="utf-8") as fp:
+            yield fp
+
+    @contextmanager
+    def open_raw_messages_file(self, mode="r"):
+        with self._fs.open(self._raw_messages_file_name, mode, encoding="utf-8") as fp:
             yield fp
 
 
@@ -46,6 +52,21 @@ class Users:
                 return user
         else:
             raise KeyError(user_id)
+
+
+class Channels:
+
+    def __init__(self, database):
+        self._database = database
+        self._data = self._read_input()
+
+    def _read_input(self):
+        with self._database.open_channels_file() as fp:
+            lines = [json.loads(line) for line in fp]
+        return lines
+
+    def all(self):
+        yield from self._data.copy()
 
 
 @use_context
@@ -82,6 +103,25 @@ class JsonChannelsWriter(Configurable):
 
 
     def __call__(self, fp, context, channel, *, database):
+        context.setdefault("lineno", 0)
+        line = ("\n" if context.lineno else "") + json.dumps(channel)
+        fp.write(line)
+        fp.flush()
+        context.lineno += 1
+        return NOT_MODIFIED
+
+@use_context
+class JsonRawMessagesWriter(Configurable):
+
+    database = Service("database")
+
+    @ContextProcessor
+    def fp(self, _, *, database):
+        with database.open_raw_messages_file("w") as fp:
+            yield fp
+            fp.write("\n")
+
+    def __call__(self, fp, context, raw_message, *, database):
         context.setdefault("lineno", 0)
         line = ("\n" if context.lineno else "") + json.dumps(channel)
         fp.write(line)
