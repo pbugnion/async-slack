@@ -68,7 +68,7 @@ def get_raw_messages_graph(**options):
         get_channels,
         MessagesFetcher(datetime.date(2020, 4, 9), datetime.date(2020, 4, 10)),
         process_channel_message,
-        bonobo.LdjsonWriter(path="messages.json", mode="w")
+        db.JsonRawMessagesWriter()
     )
     return graph
 
