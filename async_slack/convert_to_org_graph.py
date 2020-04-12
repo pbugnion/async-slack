@@ -5,10 +5,10 @@ import bonobo
 from bonobo.config import Configurable, ContextProcessor, use_raw_input, use
 from bonobo.util import ValueHolder
 
-from orger.inorganic import node, link, timestamp
 from emoji import emojize
 
 from . import db
+from .orger.inorganic import node, link, timestamp
 
 
 class ChannelGrouper(Configurable):
