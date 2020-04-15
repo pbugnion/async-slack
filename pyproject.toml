@@ -11,6 +11,7 @@ tenacity = "^6.1.0"
 dpath = "^2.0.1"
 slacker = "^0.14.0"
 emoji = "^0.5.4"
+toml = "^0.10.0"
 
 [tool.poetry.dev-dependencies]
 

@@ -272,6 +272,14 @@ doc = ["reno", "sphinx", "tornado (>=4.5)"]
 
 [[package]]
 category = "main"
+description = "Python Library for Tom's Obvious, Minimal Language"
+name = "toml"
+optional = false
+python-versions = "*"
+version = "0.10.0"
+
+[[package]]
+category = "main"
 description = "ASCII transliterations of Unicode text"
 name = "unidecode"
 optional = false
@@ -303,7 +311,7 @@ version = "1.0.1"
 dev = ["coverage (>=4.4,<5.0)", "pytest (>=3.4,<4.0)", "pytest-cov (>=2.5,<3.0)", "pytest-sugar (>=0.9.1,<0.10.0)", "sphinx (>=1.7,<2.0)", "yapf"]
 
 [metadata]
-content-hash = "3e0fc92de1cbb5896ed8798771027ca3555294b0a86f5a85f2e570afac66b154"
+content-hash = "b99e0165af79a155e48149e80be2ddac2d465d405a1f9c36be60782dc0dadfd4"
 python-versions = "^3.6"
 
 [metadata.files]
@@ -444,6 +452,11 @@ stevedore = [
 tenacity = [
     {file = "tenacity-6.1.0-py2.py3-none-any.whl", hash = "sha256:f7bcbf5bb53875cfc38f61f596a88b1c994af32420f120c4409542a683ad613b"},
     {file = "tenacity-6.1.0.tar.gz", hash = "sha256:fb01d8ef2474eed422d8314a566c9e391cccb6e50cf4585022add6cb5cda66c8"},
+]
+toml = [
+    {file = "toml-0.10.0-py2.7.egg", hash = "sha256:f1db651f9657708513243e61e6cc67d101a39bad662eaa9b5546f789338e07a3"},
+    {file = "toml-0.10.0-py2.py3-none-any.whl", hash = "sha256:235682dd292d5899d361a811df37e04a8828a5b1da3115886b73cf81ebc9100e"},
+    {file = "toml-0.10.0.tar.gz", hash = "sha256:229f81c57791a41d65e399fc06bf0848bab550a9dfd5ed66df18ce5f05e73d5c"},
 ]
 unidecode = [
     {file = "Unidecode-1.1.1-py2.py3-none-any.whl", hash = "sha256:1d7a042116536098d05d599ef2b8616759f02985c85b4fef50c78a5aaf10822a"},
