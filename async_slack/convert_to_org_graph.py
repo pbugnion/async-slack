@@ -124,23 +124,13 @@ def yield_message(message, block_renderer):
         message_time = datetime.fromtimestamp(float(message['ts']))
         summary = body[:100]
         user = message.get('user_name') or message.get('user') or 'UNKNOWN'
-        # channel = '#' + message['channel_name']
-        # heading = f"{timestamp(message_time, inactive=True)} {user} - {summary}..."
-        # properties = {
-        #     'channel': channel,
-        #     'user': user
-        # }
         heading = f"{timestamp(message_time, inactive=True)} *{user}*"
-        # body = textwrap.indent(body, prefix="  ")
         yield {
             "body": body,
             "user": user,
-            # "channel": channel
             "channel": message["channel"],
             "timestamp": timestamp(message_time, inactive=True)
         }
-        # yield f"{heading}\n{body}\n"
-        # yield node(heading=heading, body=body, properties=properties)
 
 
 @use("block_renderer", "channels")
