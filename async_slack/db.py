@@ -5,19 +5,30 @@ from pathlib import Path
 from functools import lru_cache
 
 import bonobo
-from bonobo.config import ContextProcessor, use_context, Configurable, Service
+from bonobo.config import ContextProcessor, use_context, Configurable, Service, Option
 from bonobo.constants import NOT_MODIFIED
+
+import fs.errors
 
 
 class JsonFsDatabase:
 
     def __init__(self, root):
         self._root = Path(root)
-        self._fs = bonobo.open_fs(self._root)
+        self._fs = bonobo.open_fs(self._root, create=True)
         self._users_file_name = "users.json"
         self._channels_file_name = "channels.json"
-        self._raw_messages_file_name = "raw-messages.json"
         self._enriched_messages_file_name = "enriched-messages.json"
+        self._status_file_name = "status.json"
+        self._org_messages_file_name = "org-messages.json"
+
+    def _get_raw_messages_file_name(self, date):
+        return f"raw-messages-{date.isoformat()}.json"
+
+    @contextmanager
+    def open_status_file(self, mode="r"):
+        with self._fs.open(self._status_file_name, mode, encoding="utf-8") as fp:
+            yield fp
 
     @contextmanager
     def open_users_file(self, mode="r"):
@@ -30,14 +41,50 @@ class JsonFsDatabase:
             yield fp
 
     @contextmanager
-    def open_raw_messages_file(self, mode="r"):
-        with self._fs.open(self._raw_messages_file_name, mode, encoding="utf-8") as fp:
+    def open_raw_messages_file(self, date, mode="r"):
+        file_name = self._get_raw_messages_file_name(date)
+        with self._fs.open(file_name, mode, encoding="utf-8") as fp:
             yield fp
 
     @contextmanager
     def open_enriched_messages_file(self, mode="r"):
         with self._fs.open(self._enriched_messages_file_name, mode, encoding="utf-8") as fp:
             yield fp
+
+    @contextmanager
+    def open_org_messages_file(self, mode="r"):
+        with self._fs.open(self._org_messages_file_name, mode, encoding="utf-8") as fp:
+            yield fp
+
+
+class Status:
+
+    def __init__(self, database):
+        self._database = database
+        self._data = self._read_input()
+
+    def _read_input(self):
+        try:
+            with self._database.open_status_file() as fp:
+                entries = json.load(fp)
+        except fs.errors.ResourceNotFound:
+            entries = {}
+        return entries
+
+    def _write_input(self):
+        with self._database.open_status_file("w") as fp:
+            json.dump(self._data, fp)
+
+    def is_complete(self, date):
+        try:
+            complete = self._data[date.isoformat()]["complete"]
+        except KeyError:
+            complete = False
+        return complete
+
+    def set_complete(self, date):
+        self._data[date.isoformat()] = {"complete": True}
+        self._write_input()
 
 
 class Users:
@@ -123,8 +170,11 @@ class JsonChannelsWriter(_FileLdJsonWriter):
 @use_context
 class JsonRawMessagesWriter(_FileLdJsonWriter):
 
+    date = Option(required=True, positional=True)
+    database = Service("database")
+
     def open(self, database):
-        return database.open_raw_messages_file("w")
+        return database.open_raw_messages_file(self.date, mode="w")
 
 
 @use_context
@@ -139,14 +189,11 @@ class JsonRawMessagesReader(Configurable):
 
     database = Service("database")
 
-    @ContextProcessor
-    def fp(self, _, *, database):
-        with database.open_raw_messages_file() as fp:
-            yield fp
-
-    def __call__(self, fp, _, *, database):
-        for line in fp:
-            yield json.loads(line)
+    def __call__(self, _, date, *, database):
+        with database.open_raw_messages_file(date) as fp:
+            for line in fp:
+                if line.strip():
+                    yield json.loads(line)
 
 
 @use_context
@@ -162,3 +209,11 @@ class JsonEnrichedMessagesReader(Configurable):
     def __call__(self, fp, _, *, database):
         for line in fp:
             yield json.loads(line)
+
+
+
+@use_context
+class JsonOrgMessagesWriter(_FileLdJsonWriter):
+
+    def open(self, database):
+        return database.open_org_messages_file("w")

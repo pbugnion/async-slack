@@ -1,6 +1,7 @@
+import datetime
 
 import bonobo
-from bonobo.config import use
+from bonobo.config import use, Configurable, Option
 
 from . import db
 
@@ -32,9 +33,21 @@ def add_channel(message, channels):
     yield message
 
 
-def get_enriched_messages_graph(**options):
+class DateRange(Configurable):
+
+    start_date = Option(positional=True, required=True)
+    end_date = Option(positional=True, required=True)
+
+    def __call__(self):
+        for ndays in range((self.end_date - self.start_date).days):
+            date = self.start_date + datetime.timedelta(days=ndays)
+            yield date
+
+
+def get_enriched_messages_graph(start_date, end_date, **options):
     graph = bonobo.Graph()
     graph.add_chain(
+        DateRange(start_date, end_date),
         db.JsonRawMessagesReader(),
         add_user,
         add_channel,

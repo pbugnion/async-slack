@@ -36,7 +36,10 @@ class BlockRenderer:
         self._channels = channels
     
     def render(self, block):
-        elements = block['elements']
+        try:
+            elements = block['elements']
+        except KeyError:
+            elements = []
         return "\n".join(self._element(element) for element in elements)
 
     def _rich_text_section(self, element):
@@ -79,11 +82,19 @@ class BlockRenderer:
         except KeyError:
             channel_name = channel_id
         return f"#{channel_name}"
+
+
+    def _debug(self, element):
+        return str(element)
     
     
     def _emoji(self, element):
         name = element['name']
         return emojize(f":{name}:")
+
+
+    def _empty(self, element):
+        return ""
             
     
     def _element(self, element):
@@ -95,10 +106,13 @@ class BlockRenderer:
             'link': self._link,
             'broadcast': self._broadcast,
             'user': self._user,
+            'usergroup': self._debug,
             'channel': self._channel,
             'emoji': self._emoji,
             'rich_text_preformatted': self._rich_text_section,
-            'rich_text_quote': self._rich_text_section
+            'rich_text_quote': self._rich_text_section,
+            'button': self._empty,
+            'mrkdwn': self._empty
         }[element_type](element)
 
 
