@@ -161,13 +161,10 @@ def get_convert_to_org_graph(**options):
     graph = bonobo.Graph()
     graph.add_chain(
         db.JsonEnrichedMessagesReader(),
-        # convert_channel_to_node,
-        # render_node,
         yield_message,
         ChannelGrouper(),
         yield_channel,
-        bonobo.LdjsonWriter("output.json")
-        # bonobo.FileWriter("output.org")
+        db.JsonOrgMessagesWriter()
     )
     return graph
 
