@@ -148,7 +148,7 @@ def yield_channel(channel_id, messages, channels):
     channel = channels.for_id(channel_id)
     yield {
         "channel": channel,
-        "messages": messages
+        "messages": sorted(messages, key=lambda message: message["timestamp"], reverse=True)
     }
 
 
