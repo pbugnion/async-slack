@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "async-slack"
+version = "0.1.0"
+description = ""
+authors = ["Pascal Bugnion <pascal@bugnion.org>"]
+
+[tool.poetry.dependencies]
+python = "^3.6"
+bonobo = "^0.6.4"
+tenacity = "^6.1.0"
+dpath = "^2.0.1"
+slacker = "^0.14.0"
+emoji = "^0.5.4"
+toml = "^0.10.0"
+workalendar = "^8.4.0"
+
+[tool.poetry.dev-dependencies]
+
+[tool.poetry.scripts]
+async-update-slack = "async_slack.update_database:main"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
+

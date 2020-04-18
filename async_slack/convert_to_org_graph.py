@@ -5,10 +5,10 @@ import bonobo
 from bonobo.config import Configurable, ContextProcessor, use_raw_input, use
 from bonobo.util import ValueHolder
 
-from orger.inorganic import node, link, timestamp
 from emoji import emojize
 
 from . import db
+from .orger.inorganic import node, link, timestamp
 
 
 class ChannelGrouper(Configurable):
@@ -36,7 +36,10 @@ class BlockRenderer:
         self._channels = channels
     
     def render(self, block):
-        elements = block['elements']
+        try:
+            elements = block['elements']
+        except KeyError:
+            elements = []
         return "\n".join(self._element(element) for element in elements)
 
     def _rich_text_section(self, element):
@@ -79,11 +82,19 @@ class BlockRenderer:
         except KeyError:
             channel_name = channel_id
         return f"#{channel_name}"
+
+
+    def _debug(self, element):
+        return str(element)
     
     
     def _emoji(self, element):
         name = element['name']
         return emojize(f":{name}:")
+
+
+    def _empty(self, element):
+        return ""
             
     
     def _element(self, element):
@@ -95,38 +106,49 @@ class BlockRenderer:
             'link': self._link,
             'broadcast': self._broadcast,
             'user': self._user,
+            'usergroup': self._debug,
             'channel': self._channel,
             'emoji': self._emoji,
             'rich_text_preformatted': self._rich_text_section,
-            'rich_text_quote': self._rich_text_section
+            'rich_text_quote': self._rich_text_section,
+            'button': self._empty,
+            'mrkdwn': self._empty
         }[element_type](element)
 
 
-@use("block_renderer")
-def yield_message(message, block_renderer):
+def transform_message(message, block_renderer):
     blocks = message.get('blocks')
     if blocks:
         body = "\n".join(block_renderer.render(block) for block in blocks)
         message_time = datetime.fromtimestamp(float(message['ts']))
-        summary = body[:100]
         user = message.get('user_name') or message.get('user') or 'UNKNOWN'
-        # channel = '#' + message['channel_name']
-        # heading = f"{timestamp(message_time, inactive=True)} {user} - {summary}..."
-        # properties = {
-        #     'channel': channel,
-        #     'user': user
-        # }
-        heading = f"{timestamp(message_time, inactive=True)} *{user}*"
-        # body = textwrap.indent(body, prefix="  ")
-        yield {
+        return {
             "body": body,
             "user": user,
-            # "channel": channel
-            "channel": message["channel"],
             "timestamp": timestamp(message_time, inactive=True)
         }
-        # yield f"{heading}\n{body}\n"
-        # yield node(heading=heading, body=body, properties=properties)
+
+
+def transform_thread(thread, block_renderer):
+    transformed_thread = []
+    if thread is not None:
+        for reply in thread:
+            transformed_reply = transform_message(reply, block_renderer)
+            if transformed_reply is not None:
+                transformed_thread.append(transformed_reply)
+    return transformed_thread
+
+
+@use("block_renderer")
+def yield_message(message, block_renderer):
+    transformed_message = transform_message(message, block_renderer)
+    if transformed_message is not None:
+        transformed_message["channel"] = message["channel"]
+        thread = message.get("thread")
+        if thread is not None:
+            transformed_message["thread"] = transform_thread(
+                thread, block_renderer)
+        yield transformed_message
 
 
 @use("block_renderer", "channels")
@@ -148,7 +170,7 @@ def yield_channel(channel_id, messages, channels):
     channel = channels.for_id(channel_id)
     yield {
         "channel": channel,
-        "messages": messages
+        "messages": sorted(messages, key=lambda message: message["timestamp"], reverse=True)
     }
 
 
@@ -161,13 +183,10 @@ def get_convert_to_org_graph(**options):
     graph = bonobo.Graph()
     graph.add_chain(
         db.JsonEnrichedMessagesReader(),
-        # convert_channel_to_node,
-        # render_node,
         yield_message,
         ChannelGrouper(),
         yield_channel,
-        bonobo.LdjsonWriter("output.json")
-        # bonobo.FileWriter("output.org")
+        db.JsonOrgMessagesWriter()
     )
     return graph
 
