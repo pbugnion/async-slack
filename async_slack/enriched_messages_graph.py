@@ -4,21 +4,20 @@ import bonobo
 from bonobo.config import use, Configurable, Option
 
 from . import db
+from .date_utils import date_range
 
 
-class DateRange(Configurable):
+class DateRangeNode(Configurable):
 
     start_date = Option(positional=True, required=True)
     end_date = Option(positional=True, required=True)
 
     def __call__(self):
-        for ndays in range((self.end_date - self.start_date).days):
-            date = self.start_date + datetime.timedelta(days=ndays)
+        for date in date_range(self.start_date, self.end_date):
             yield date
 
 
-@use("users")
-def add_user(message, users):
+def add_user_to_message(message, users):
     message = message.copy()
     try:
         user_id = message["user"]
@@ -28,7 +27,20 @@ def add_user(message, users):
     else:
         message["user_name"] = user["name"]
         message["user_full_name"] = user["real_name"]
-    yield message
+    return message
+
+
+@use("users")
+def add_user(message, users):
+    updated_message = add_user_to_message(message, users)
+    try:
+        thread = updated_message["thread"]
+        updated_message["thread"] = [
+            add_user_to_message(reply, users) for reply in thread
+        ]
+    except KeyError:
+        pass
+    yield updated_message
 
 
 @use("channels")
@@ -47,8 +59,8 @@ def add_channel(message, channels):
 def get_enriched_messages_graph(start_date, end_date, **options):
     graph = bonobo.Graph()
     graph.add_chain(
-        DateRange(start_date, end_date),
-        db.JsonRawMessagesReader(),
+        DateRangeNode(start_date, end_date),
+        db.JsonRawThreadsReader(),
         add_user,
         add_channel,
         db.JsonEnrichedMessagesWriter()

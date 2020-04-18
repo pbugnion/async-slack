@@ -116,21 +116,39 @@ class BlockRenderer:
         }[element_type](element)
 
 
-@use("block_renderer")
-def yield_message(message, block_renderer):
+def transform_message(message, block_renderer):
     blocks = message.get('blocks')
     if blocks:
         body = "\n".join(block_renderer.render(block) for block in blocks)
         message_time = datetime.fromtimestamp(float(message['ts']))
-        summary = body[:100]
         user = message.get('user_name') or message.get('user') or 'UNKNOWN'
-        heading = f"{timestamp(message_time, inactive=True)} *{user}*"
-        yield {
+        return {
             "body": body,
             "user": user,
-            "channel": message["channel"],
             "timestamp": timestamp(message_time, inactive=True)
         }
+
+
+def transform_thread(thread, block_renderer):
+    transformed_thread = []
+    if thread is not None:
+        for reply in thread:
+            transformed_reply = transform_message(reply, block_renderer)
+            if transformed_reply is not None:
+                transformed_thread.append(transformed_reply)
+    return transformed_thread
+
+
+@use("block_renderer")
+def yield_message(message, block_renderer):
+    transformed_message = transform_message(message, block_renderer)
+    if transformed_message is not None:
+        transformed_message["channel"] = message["channel"]
+        thread = message.get("thread")
+        if thread is not None:
+            transformed_message["thread"] = transform_thread(
+                thread, block_renderer)
+        yield transformed_message
 
 
 @use("block_renderer", "channels")
