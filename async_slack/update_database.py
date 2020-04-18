@@ -29,15 +29,15 @@ def main():
     logging.info(f"Running with configuration {configuration}")
     base_services = get_services(configuration)
     logging.info("Getting users")
-    # bonobo.run(
-    #     get_users_graph(),
-    #     services=get_users_services(base_services)
-    # )
-    # logging.info("Getting channels")
-    # bonobo.run(
-    #     get_channels_graph(),
-    #     services=get_channels_services(base_services)
-    # )
+    bonobo.run(
+        get_users_graph(),
+        services=get_users_services(base_services)
+    )
+    logging.info("Getting channels")
+    bonobo.run(
+        get_channels_graph(),
+        services=get_channels_services(base_services)
+    )
     logging.info("Getting raw messages")
     update_raw_messages(
         configuration.start_date,
