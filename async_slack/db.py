@@ -19,11 +19,9 @@ class JsonFsDatabase:
         self._users_file_name = "users.json"
         self._channels_file_name = "channels.json"
         self._enriched_messages_file_name = "enriched-messages.json"
+        self._message_count_file = "message-count.json"
         self._status_file_name = "status.json"
         self._org_messages_file_name = "org-messages.json"
-
-    def _get_raw_messages_file_name(self, date):
-        return f"raw-messages-{date.isoformat()}.json"
 
     def _get_raw_threads_file_name(self, date):
         return f"raw-threads-{date.isoformat()}.json"
@@ -49,12 +47,6 @@ class JsonFsDatabase:
             yield fp
 
     @contextmanager
-    def open_raw_messages_file(self, date, mode="r"):
-        file_name = self._get_raw_messages_file_name(date)
-        with self._open(file_name, mode) as fp:
-            yield fp
-
-    @contextmanager
     def open_raw_threads_file(self, date, mode="r"):
         file_name = self._get_raw_threads_file_name(date)
         with self._open(file_name, mode) as fp:
@@ -68,6 +60,11 @@ class JsonFsDatabase:
     @contextmanager
     def open_org_messages_file(self, mode="r"):
         with self._open(self._org_messages_file_name, mode) as fp:
+            yield fp
+
+    @contextmanager
+    def open_message_count_file(self, mode="r"):
+        with self._open(self._message_count_file, mode) as fp:
             yield fp
 
 
@@ -89,9 +86,9 @@ class Status:
         with self._database.open_status_file("w") as fp:
             json.dump(self._data, fp)
 
-    def is_raw_messages_complete(self, date):
+    def is_message_count_complete(self, date):
         try:
-            complete = self._data[date.isoformat()]["raw_messages_complete"]
+            complete = self._data[date.isoformat()]["message_count_complete"]
         except KeyError:
             complete = False
         return complete
@@ -103,13 +100,13 @@ class Status:
             complete = False
         return complete
 
-    def set_raw_messages_complete(self, date):
-        status_for_date = self._data.setdefault(date.isoformat(), dict)
-        status_for_date["raw_messages_complete"] = True
+    def set_message_count_complete(self, date):
+        status_for_date = self._data.setdefault(date.isoformat(), {})
+        status_for_date["message_count_complete"] = True
         self._write_input()
 
     def set_raw_threads_complete(self, date):
-        status_for_date = self._data.setdefault(date.isoformat(), dict)
+        status_for_date = self._data.setdefault(date.isoformat(), {})
         status_for_date["raw_threads_complete"] = True
         self._write_input()
 
@@ -157,6 +154,32 @@ class Channels:
             raise KeyError(channel_id)
 
 
+class MessageCount:
+
+    def __init__(self, database):
+        self._database = database
+        self._data = self._read_input()
+
+    def _read_input(self):
+        try:
+            with self._database.open_message_count_file() as fp:
+                entries = json.load(fp)
+        except fs.errors.ResourceNotFound:
+            entries = {}
+        return entries
+
+    def _write_input(self):
+        with self._database.open_message_count_file("w") as fp:
+            json.dump(self._data, fp)
+
+    def set_day_channel(self, date, channel, count):
+        self._data.setdefault(date.isoformat(), {})[channel] = count
+        self._write_input()
+
+    def get_channels_for_day(self, date):
+        return self._data.get(date.isoformat(), {}).keys()
+
+
 @use_context
 class _FileLdJsonWriter(Configurable):
 
@@ -192,16 +215,6 @@ class JsonChannelsWriter(_FileLdJsonWriter):
 
     def open(self, database):
         return database.open_channels_file("w")
-
-
-@use_context
-class JsonRawMessagesWriter(_FileLdJsonWriter):
-
-    date = Option(required=True, positional=True)
-    database = Service("database")
-
-    def open(self, database):
-        return database.open_raw_messages_file(self.date, mode="w")
 
 
 @use_context

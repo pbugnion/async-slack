@@ -2,8 +2,7 @@ import datetime
 import logging
 
 import bonobo  # type: ignore
-from bonobo.config import Configurable, ContextProcessor, use_raw_input  # type: ignore
-from bonobo.util import ValueHolder  # type: ignore
+from bonobo.config import Configurable, Option, Service  # type: ignore
 
 from . import db
 from . import slack
@@ -12,20 +11,13 @@ from .dict_utils import map_dictionary
 from .date_utils import date_range, nworking_days_before
 
 
-class ChannelExtractor(Configurable):
-    """ Get unique channel names from the raw messages. """
+class ChannelsSource(Configurable):
 
-    @ContextProcessor
-    def acc(self, context):
-        channels = yield ValueHolder(set())
-        for channel in channels.get():
-            context.send(channel)
+    date = Option(positional=True, required=True)
+    message_count_database = Service("message_count")
 
-    @use_raw_input
-    def __call__(self, channels, message):  # pylint: disable=arguments-differ
-        channel_id = message.get("channel")
-        if channel_id:
-            channels.add(channel_id)
+    def __call__(self, message_count_database):
+        yield from message_count_database.get_channels_for_day(self.date)
 
 
 @slack.api_retry
@@ -93,8 +85,8 @@ def add_thread_to_message(channel_id, message):
 def get_raw_threads_graph(day):
     graph = bonobo.Graph()
     graph.add_chain(
-        db.JsonRawMessagesDateReader(day),
-        ChannelExtractor(),
+        ChannelsSource(day),
+        # ChannelExtractor(),
         MessagesFetcher(day, day + datetime.timedelta(days=1)),
         remove_invalid_messages,
         process_channel_message,
@@ -105,7 +97,21 @@ def get_raw_threads_graph(day):
 
 
 def get_raw_threads_services(base_services):
-    return base_services.copy()
+    database = base_services["database"]
+    message_count = db.MessageCount(database)
+    return {**base_services, "message_count": message_count}
+
+
+def update_raw_threads_quick(
+        start_date,
+        end_date,
+        base_services
+):
+    services = get_raw_threads_services(base_services)
+    for date in date_range(start_date, end_date):
+        logging.info("Fetching raw threads for %s", date.isoformat())
+        graph = get_raw_threads_graph(date)
+        bonobo.run(graph, services=services)
 
 
 def update_raw_threads(
