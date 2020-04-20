@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "async-slack"
-version = "0.1.0"
+version = "0.1.0-rc1"
 description = ""
 authors = ["Pascal Bugnion <pascal@bugnion.org>"]
 
