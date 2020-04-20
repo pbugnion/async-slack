@@ -86,7 +86,6 @@ def get_raw_threads_graph(day):
     graph = bonobo.Graph()
     graph.add_chain(
         ChannelsSource(day),
-        # ChannelExtractor(),
         MessagesFetcher(day, day + datetime.timedelta(days=1)),
         remove_invalid_messages,
         process_channel_message,
