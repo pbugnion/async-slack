@@ -71,15 +71,15 @@ def main():
             services=get_channels_services(base_services)
         )
     logging.info("Getting message count")
-    # with log_timed("message count graph"):
-    #     if arguments.quick:
-    #         update_message_count_quick(datetime.date.today(), base_services)
-    #     else:
-    #         update_message_count(
-    #             configuration.start_date,
-    #             configuration.end_date,
-    #             base_services
-    #         )
+    with log_timed("message count graph"):
+        if arguments.quick:
+            update_message_count_quick(datetime.date.today(), base_services)
+        else:
+            update_message_count(
+                configuration.start_date,
+                configuration.end_date,
+                base_services
+            )
     logging.info("Getting raw threads.")
     with log_timed("raw threads graph"):
         if arguments.quick:
