@@ -7,21 +7,21 @@ from .dict_utils import map_dictionary
 
 
 @slack.api_retry
-def get_conversations(types, cursor=None):
-    client = slack.get_client()
+def get_conversations(client, types, cursor=None):
     return client.conversations.list(types=types, cursor=cursor)
 
 
-def get_channels():
+@use("slack")
+def get_channels(slack):
     types = "public_channel,private_channel,mpim,im"
-    response = get_conversations(types).body
+    response = get_conversations(slack.client, types).body
 
     for channel in response["channels"]:
         yield channel
 
     while response["response_metadata"].get("next_cursor"):
         cursor = response["response_metadata"]["next_cursor"]
-        response = get_conversations(types, cursor=cursor).body
+        response = get_conversations(slack.client, types, cursor=cursor).body
         for channel in response["channels"]:
             yield channel
 

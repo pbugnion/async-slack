@@ -2,7 +2,7 @@ import datetime
 import logging
 
 import bonobo  # type: ignore
-from bonobo.config import Configurable, Option, Service  # type: ignore
+from bonobo.config import Configurable, Option, Service, use  # type: ignore
 
 from . import db
 from . import slack
@@ -21,8 +21,7 @@ class ChannelsSource(Configurable):
 
 
 @slack.api_retry
-def get_replies(channel_id, thread_ts, oldest):
-    client = slack.get_client()
+def get_replies(client, channel_id, thread_ts, oldest):
     return client.conversations.replies(
         channel_id,
         thread_ts,
@@ -30,8 +29,8 @@ def get_replies(channel_id, thread_ts, oldest):
     ).body
 
 
-def fetch_thread_for_message(channel_id, thread_ts):
-    response = get_replies(channel_id, thread_ts, thread_ts)
+def fetch_thread_for_message(channel_id, thread_ts, slack):
+    response = get_replies(slack.client, channel_id, thread_ts, thread_ts)
 
     for message in response["messages"]:
         if message["ts"] != thread_ts:  # don't return the original message
@@ -39,7 +38,7 @@ def fetch_thread_for_message(channel_id, thread_ts):
 
     while response["has_more"]:
         next_oldest = response["messages"][-1]["ts"]
-        response = get_replies(channel_id, thread_ts, next_oldest)
+        response = get_replies(slack.client, channel_id, thread_ts, next_oldest)
         for message in response["messages"]:
             yield message
 
@@ -71,11 +70,12 @@ def process_channel_message(channel_id, message):
         yield channel_id, new_message
 
 
-def add_thread_to_message(channel_id, message):
+@use("slack")
+def add_thread_to_message(channel_id, message, slack):
     thread_ts = message.get("thread_ts")
     message_ts = message["ts"]
     if thread_ts is not None and thread_ts == message_ts:
-        thread = fetch_thread_for_message(channel_id, thread_ts)
+        thread = fetch_thread_for_message(channel_id, thread_ts, slack)
         message["thread"] = list(
             process_message_in_thread(message) for message in thread
         )

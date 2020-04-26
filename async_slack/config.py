@@ -1,6 +1,6 @@
 import datetime
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, List
 
 import toml
 
@@ -12,6 +12,7 @@ class Configuration(NamedTuple):
     start_date: datetime.date
     end_date: datetime.date
     threads_lookback_working_days: int
+    token_command: List[str]
 
 
 def read_configuration() -> Configuration:
@@ -23,9 +24,11 @@ def read_configuration() -> Configuration:
     threads_lookback_working_days = raw_configuration[
         "threads_lookback_working_days"
     ]
+    token_command = raw_configuration["slack-token"]["subprocess"]["command"]
     configuration = Configuration(
         database_directory,
         start_date, end_date,
-        threads_lookback_working_days
+        threads_lookback_working_days,
+        token_command
     )
     return configuration

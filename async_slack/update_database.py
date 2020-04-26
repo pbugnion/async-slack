@@ -19,6 +19,7 @@ from .convert_to_org_graph import (
 )
 
 from . import db
+from . import slack
 from .config import read_configuration
 from .date_utils import nworking_days_before
 
@@ -28,7 +29,8 @@ logging.basicConfig(level=logging.INFO)
 
 def get_services(configuration):
     return {
-        "database": db.JsonFsDatabase(configuration.database_directory)
+        "database": db.JsonFsDatabase(configuration.database_directory),
+        "slack": slack.SlackClient.from_command(configuration.token_command)
     }
 
 
@@ -69,15 +71,15 @@ def main():
             services=get_channels_services(base_services)
         )
     logging.info("Getting message count")
-    with log_timed("message count graph"):
-        if arguments.quick:
-            update_message_count_quick(datetime.date.today(), base_services)
-        else:
-            update_message_count(
-                configuration.start_date,
-                configuration.end_date,
-                base_services
-            )
+    # with log_timed("message count graph"):
+    #     if arguments.quick:
+    #         update_message_count_quick(datetime.date.today(), base_services)
+    #     else:
+    #         update_message_count(
+    #             configuration.start_date,
+    #             configuration.end_date,
+    #             base_services
+    #         )
     logging.info("Getting raw threads.")
     with log_timed("raw threads graph"):
         if arguments.quick:

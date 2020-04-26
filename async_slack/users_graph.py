@@ -1,13 +1,13 @@
 import bonobo
+from bonobo.config import use
 
-from . import slack
 from . import db
 from .dict_utils import map_dictionary
 
 
-def get_users():
-    client = slack.get_client()
-    response = client.users.list().body
+@use("slack")
+def get_users(slack):
+    response = slack.client.users.list().body
     for member in response["members"]:
         yield member
 
