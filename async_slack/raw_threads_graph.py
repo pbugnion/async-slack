@@ -22,11 +22,12 @@ class ChannelsSource(Configurable):
 
 @slack.api_retry
 def get_replies(client, channel_id, thread_ts, oldest):
-    return client.conversations.replies(
-        channel_id,
-        thread_ts,
-        oldest=oldest
-    ).body
+    with slack.catch_channel_not_found():
+        client.conversations.replies(
+            channel_id,
+            thread_ts,
+            oldest=oldest
+        ).body
 
 
 def fetch_thread_for_message(channel_id, thread_ts, slack):
