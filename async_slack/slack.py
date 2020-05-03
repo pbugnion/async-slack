@@ -2,6 +2,7 @@ import os
 from functools import lru_cache, wraps
 import logging
 import subprocess
+from contextlib import contextmanager
 
 from slacker import Slacker
 from tenacity import stop_after_attempt, wait_exponential, retry, after_log
@@ -37,3 +38,14 @@ api_retry = retry(
     stop=stop_after_attempt(10),
     after=after_log(logging.getLogger("slack-api"), log_level=logging.INFO)
 )
+
+
+@contextmanager
+def catch_channel_not_found():
+    try:
+        yield
+    except slacker.Error as e:
+        if hasattr(e, "args") and e.args and e.args[0] == "channel_not_found":
+            pass
+        else:
+            raise
